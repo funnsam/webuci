@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebUCI</title>
+        <link rel="stylesheet"
+              href="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.css"
+              integrity="sha384-47VeTDpmy4yT21gKPXQcLQYQZwlmz27gEH5NTrOmTk3G/SGvMyltclOW/Q8uE+sL"
+              crossorigin="anonymous">
+        <script src="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.js"
+                integrity="sha384-/KwQCjA1GWovZNV3QDVtvSMDzO4reGgarF/RqHipr7hIUElH3r5zNl9WEPPOBRIF"
+                crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+        <script src="script.js" type="module"></script>
+    </head>
+    <body>
+        <div id="chessboard" style="width: 400px;"></div>
+        <div>
+            <button id="startW">Start as white</button>
+            <button id="startB">Start as black</button>
+            <button id="exportBtn">Export game as PGN</button>
+            <button id="uploadBtn">Upload game to dpaste</button>
+        </div>
+        <pre id="message"></pre>
+        <pre id="debugMsg">Debug messages:
+</pre>
+    </body>
+</html>
