@@ -1,4 +1,20 @@
 const uciWorker = new Worker("uciworker.js", { type: "module" });
+let uciInput = new SharedArrayBuffer(4096);
+let uciInLen = new SharedArrayBuffer(4);
+
+function writeUci(inp) {
+    const encoder = new TextEncoder();
+    const utf8 = encoder.encode(inp);
+
+    let uI = new Uint8Array(uciInput);
+    let uL = new Int32Array(uciInLen);
+
+    while (Atomics.load(uL, 0)) if (Atomics.pause) Atomics.pause();
+
+    uI.set(utf8, 0);
+    Atomics.store(uL, 0, utf8.length);
+    console.log(Atomics.notify(uL, 0, 1));
+}
 
 const config = {
     draggable: true,
@@ -8,18 +24,18 @@ const config = {
 };
 
 let board;
-let position = new Chess();
+let chess = new Chess();
 
 function isWhitePiece (piece) { return /^w/.test(piece) }
 function isBlackPiece (piece) { return /^b/.test(piece) }
 
 function onDragStart(dragStartEvt) {
-    if (position.game_over()) return false;
+    if (chess.game_over()) return false;
 
-    if (position.turn() === 'w' && !isWhitePiece(dragStartEvt.piece)) return false;
-    if (position.turn() === 'b' && !isBlackPiece(dragStartEvt.piece)) return false;
+    if (chess.turn() === 'w' && !isWhitePiece(dragStartEvt.piece)) return false;
+    if (chess.turn() === 'b' && !isBlackPiece(dragStartEvt.piece)) return false;
 
-    const legalMoves = position.moves({
+    const legalMoves = chess.moves({
         square: dragStartEvt.square,
         verbose: true,
     });
@@ -28,7 +44,7 @@ function onDragStart(dragStartEvt) {
 }
 
 function onDrop(dropEvt) {
-    const move = position.move({
+    const move = chess.move({
         from: dropEvt.source,
         to: dropEvt.target,
         promotion: "q",
@@ -37,15 +53,18 @@ function onDrop(dropEvt) {
     board.clearCircles();
 
     if (move) {
-        board.fen(position.fen(), () => {});
+        board.fen(chess.fen(), () => {});
+        writeUci("go\n");
     } else {
         return "snapback";
     }
 }
 
 function restartGame(color) {
-    position.reset();
-    board.position(position.fen(), true);
+    chess.reset();
+    // chess.setHeader(color == "white" ? "Black" : "White", "Bot");
+
+    board.position(chess.fen(), true);
     board.orientation(color);
 }
 
@@ -56,15 +75,15 @@ document.addEventListener("DOMContentLoaded", function() {
     startB.onclick = () => restartGame("black");
 
     exportBtn.onclick = () => {
-        message.innerText += `${position.pgn()}\n`;
+        message.innerText += `PGN:\n${chess.pgn()}\n`;
     };
     uploadBtn.onclick = () => {
         message.innerText += `Exporting...\n`;
 
-        fetch("https://dpaste.com/aspi/", {
+        fetch("https://dpaste.com/api/", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: "content=" + encodeURIComponent(position.pgn()),
+            body: "content=" + encodeURIComponent(chess.pgn()),
         })
             .then(resp => {
                 if (!resp.ok) throw `POST response ${resp.status}`;
@@ -77,6 +96,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     uciWorker.onmessage = e => {
+        console.log(e.data);
         switch (e.data.type) {
             case "stdout":
             case "debug":
@@ -84,5 +104,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 break;
         }
     };
-    uciWorker.postMessage("__internal start");
+    uciWorker.postMessage({
+        input: uciInput,
+        inputLen: uciInLen,
+    });
+    writeUci("go\n");
 });

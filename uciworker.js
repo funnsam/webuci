@@ -1,6 +1,6 @@
 import * as uwasi from "https://cdn.jsdelivr.net/npm/uwasi@1.4.1/+esm";
 
-let input = ["go"];
+let input, inputLen, end = true;
 
 const wasi = new uwasi.WASI({
     args: ["./engine"],
@@ -11,15 +11,29 @@ const wasi = new uwasi.WASI({
         uwasi.useProc,
         uwasi.useStdio({
             stdin: () => {
-                return input.shift() || "\n";
+                if (Atomics.load(inputLen, 0) === 0 && end) {
+                    end = false;
+                    return "";
+                }
+
+                while (Atomics.load(inputLen, 0) === 0) {
+                    Atomics.wait(inputLen, 0, 0);
+                }
+
+                const len = Atomics.load(inputLen, 0);
+                const slice = input.slice(0, len);
+
+                end = true;
+                Atomics.store(inputLen, 0, 0);
+                return slice;
             },
-            stdout: (str) => {
+            stdout: str => {
                 postMessage({
                     type: "stdout",
                     content: str,
                 });
             },
-            stderr: (str) => {
+            stderr: str => {
                 postMessage({
                     type: "debug",
                     content: str,
@@ -36,17 +50,19 @@ const imports = {
 const engine = WebAssembly.instantiateStreaming(fetch("random.wasm"), imports);
 
 onmessage = e => {
-    console.log(e.data);
+    postMessage({
+        type: "debug",
+        content: `(webuci): ${e.data}\n`,
+    });
 
-    if (e.data == "__internal start") {
-        engine.then(engine => {
-            const exitCode = wasi.start(engine.instance);
-            postMessage({
-                type: "debug",
-                content: `(webuci): engine exited with exit code ${exitCode}\n`,
-            });
+    input = new Uint8Array(e.data.input);
+    inputLen = new Int32Array(e.data.inputLen);
+
+    engine.then(engine => {
+        const exitCode = wasi.start(engine.instance);
+        postMessage({
+            type: "debug",
+            content: `(webuci): engine exited with exit code ${exitCode}\n`,
         });
-    } else {
-        input.push(e.data);
-    }
+    });
 };
