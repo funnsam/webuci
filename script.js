@@ -87,7 +87,17 @@ function inputHandler(event) {
 
 function makeMove(move) {
     chess.move(move);
+    board.state.moveInputProcess.then(() => {
+        board.setPosition(chess.fen(), true);
+    });
+
     board.removeMarkers(MARKER_TYPE.circleDangerFilled);
+    if (chess.inCheck()) {
+        board.addMarker(
+            MARKER_TYPE.circleDangerFilled,
+            chess.findPiece({ type: "k", color: chess.turn() })[0],
+        );
+    }
 
     if (chess.isGameOver()) {
         message.innerText =
@@ -96,17 +106,7 @@ function makeMove(move) {
             chess.isInsufficientMaterial() ? "draw by insufficient material" :
             chess.isStalemate() ? "stalemate" :
             "three-fold repetition draw";
-    }
-
-    board.state.moveInputProcess.then(() => {
-        board.setPosition(chess.fen(), true);
-    });
-
-    if (chess.inCheck()) {
-        board.addMarker(
-            MARKER_TYPE.circleDangerFilled,
-            chess.findPiece({ type: "k", color: chess.turn() })[0],
-        );
+        return;
     }
 
     if (chess.turn() == botColor) botThink();
@@ -239,10 +239,15 @@ document.addEventListener("DOMContentLoaded", function() {
             handleUciOut();
         }
     };
+
+    if (location.hash === "") {
+        location.hash = "#random.wasm";
+    }
+
     uciWorker.postMessage({
         input: uciInput,
         inputLen: uciInLen,
         engineUrl: location.hash.slice(1),
     });
-    writeUci("uci\nisready\n");
+    writeUci("uci\nisready\nucinewgame\n");
 });
