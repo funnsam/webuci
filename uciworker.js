@@ -1,6 +1,6 @@
 import * as uwasi from "https://cdn.jsdelivr.net/npm/uwasi@1.4.1/+esm";
 
-let input, inputLen, end = true;
+let input, inputLen, end = false;
 
 const wasi = new uwasi.WASI({
     args: ["./engine"],
@@ -47,22 +47,17 @@ const imports = {
     wasi_snapshot_preview1: wasi.wasiImport
 };
 
-const engine = WebAssembly.instantiateStreaming(fetch("random.wasm"), imports);
-
 onmessage = e => {
-    postMessage({
-        type: "debug",
-        content: `(webuci): ${e.data}\n`,
-    });
-
     input = new Uint8Array(e.data.input);
     inputLen = new Int32Array(e.data.inputLen);
+
+    const engine = WebAssembly.instantiateStreaming(fetch(e.data.engineUrl), imports);
 
     engine.then(engine => {
         const exitCode = wasi.start(engine.instance);
         postMessage({
             type: "debug",
-            content: `(webuci): engine exited with exit code ${exitCode}\n`,
+            content: `\n(webuci): engine exited with exit code ${exitCode}\n`,
         });
     });
 };

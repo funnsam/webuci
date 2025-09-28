@@ -2,29 +2,44 @@
 <html>
     <head>
         <title>WebUCI</title>
-        <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-        <script>eruda.init();</script>
-
-        <link rel="stylesheet"
-              href="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.css"
-              integrity="sha384-47VeTDpmy4yT21gKPXQcLQYQZwlmz27gEH5NTrOmTk3G/SGvMyltclOW/Q8uE+sL"
-              crossorigin="anonymous">
-        <script src="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.js"
-                integrity="sha384-/KwQCjA1GWovZNV3QDVtvSMDzO4reGgarF/RqHipr7hIUElH3r5zNl9WEPPOBRIF"
-                crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/assets/chessboard.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/assets/extensions/arrows/arrows.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/assets/extensions/markers/markers.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/assets/extensions/promotion-dialog/promotion-dialog.min.css">
         <script src="script.js" type="module"></script>
     </head>
     <body>
-        <div id="chessboard" style="width: 400px;"></div>
-        <div>
-            <button id="startW">Start as white</button>
-            <button id="startB">Start as black</button>
-            <button id="exportBtn">Export game as PGN</button>
-            <button id="uploadBtn">Upload game to dpaste</button>
+        <div id="left">
+            <details id="debugCollapse">
+                <summary>Debug messages (contains hints from the engine)</summary>
+                <pre id="debugMsg"></pre>
+            </details>
         </div>
-        <pre id="message"></pre>
-        <pre id="debugMsg">Debug messages:
-</pre>
+        <div id="mid">
+            <div id="chessboard"></div>
+            <div id="control">
+                <div><!--
+                 --><button id="startW">Start as white</button><!--
+                 --><button id="startB">Start as black</button><!--
+                 --><button id="exportBtn">Export game as PGN</button><!--
+                 --><button id="uploadBtn">Upload game to dpaste</button><!--
+             --></div>
+
+                <div>
+                    <label for="movetime">Engine move time</label>
+                    <input id="movetime" name="movetime" type="range" value="5" min="0.1" max="10" step="0.1" autocomplete="off" oninput="this.nextElementSibling.value=this.value+'s'">
+                    <output>5s</output>
+                </div>
+            </div>
+        </div>
+        <div id="right">
+            <div id="evalDiv">
+                <h1 id="evalScore">+0.00</h1>
+                <span id="evalMsg">Depth: 0 (0 nodes)</span>
+            </div>
+            <pre id="message"></pre>
+        </div>
     </body>
 </html>

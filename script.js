@@ -1,8 +1,19 @@
+import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm";
+
+import { Chessboard, INPUT_EVENT_TYPE } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/+esm";
+import { Markers, MARKER_TYPE } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/src/extensions/markers/Markers.js";
+import { PromotionDialog } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/src/extensions/promotion-dialog/PromotionDialog.js";
+import { RightClickAnnotator } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/src/extensions/right-click-annotator/RightClickAnnotator.js";
+
 const uciWorker = new Worker("uciworker.js", { type: "module" });
 let uciInput = new SharedArrayBuffer(4096);
 let uciInLen = new SharedArrayBuffer(4);
+let uciOutput = "";
+let thinking = false;
 
 function writeUci(inp) {
+    debugMsg.innerText += inp;
+
     const encoder = new TextEncoder();
     const utf8 = encoder.encode(inp);
 
@@ -13,72 +24,194 @@ function writeUci(inp) {
 
     uI.set(utf8, 0);
     Atomics.store(uL, 0, utf8.length);
-    console.log(Atomics.notify(uL, 0, 1));
+    Atomics.notify(uL, 0, 1);
 }
-
-const config = {
-    draggable: true,
-    position: "start",
-    onDragStart,
-    onDrop,
-};
 
 let board;
 let chess = new Chess();
+let botColor, playerColor;
 
-function isWhitePiece (piece) { return /^w/.test(piece) }
-function isBlackPiece (piece) { return /^b/.test(piece) }
+function inputHandler(event) {
+    if (event.type === INPUT_EVENT_TYPE.movingOverSquare) return;
 
-function onDragStart(dragStartEvt) {
-    if (chess.game_over()) return false;
+    if (event.type !== INPUT_EVENT_TYPE.moveInputFinished) {
+        board.removeLegalMovesMarkers();
+    }
 
-    if (chess.turn() === 'w' && !isWhitePiece(dragStartEvt.piece)) return false;
-    if (chess.turn() === 'b' && !isBlackPiece(dragStartEvt.piece)) return false;
+    switch (event.type) {
+        case INPUT_EVENT_TYPE.moveInputStarted:
+            if (event.piece.charAt(0) !== playerColor) return false;
 
-    const legalMoves = chess.moves({
-        square: dragStartEvt.square,
-        verbose: true,
-    });
+            board.removeArrows();
+            board.removeMarkers();
 
-    legalMoves.forEach((move) => board.addCircle(move.to));
-}
+            const moves = chess.moves({ square: event.squareFrom, verbose: true });
+            board.addLegalMovesMarkers(moves);
+            return moves.length > 0;
 
-function onDrop(dropEvt) {
-    const move = chess.move({
-        from: dropEvt.source,
-        to: dropEvt.target,
-        promotion: "q",
-    });
+        case INPUT_EVENT_TYPE.moveInputStarted:
+            board.removeArrows()
+            board.removeMarkers()
+            return;
 
-    board.clearCircles();
+        case INPUT_EVENT_TYPE.validateMoveInput:
+            try {
+                const toRank = event.squareTo.charAt(1);
 
-    if (move) {
-        board.fen(chess.fen(), () => {});
-        writeUci("go\n");
-    } else {
-        return "snapback";
+                if ((toRank === "1" || toRank === "8") && event.piece.charAt(1) === "p") {
+                    board.showPromotionDialog(event.squareTo, playerColor, r => {
+                        if (r && r.piece) {
+                            makeMove({
+                                from: event.squareFrom,
+                                to: event.squareTo,
+                                promotion: r.piece.charAt(1),
+                            });
+                        } else {
+                            board.setPosition(chess.fen(), true);
+                        }
+                    });
+                } else {
+                    makeMove({
+                        from: event.squareFrom,
+                        to: event.squareTo,
+                        promotion: event.promotion,
+                    });
+                }
+
+                return true;
+            } catch {
+                return false;
+            }
     }
 }
 
-function restartGame(color) {
-    chess.reset();
-    // chess.setHeader(color == "white" ? "Black" : "White", "Bot");
+function makeMove(move) {
+    chess.move(move);
+    board.removeMarkers(MARKER_TYPE.circleDangerFilled);
 
-    board.position(chess.fen(), true);
-    board.orientation(color);
+    if (chess.isGameOver()) {
+        message.innerText =
+            chess.isCheckmate() ? "checkmate" :
+            chess.isDrawByFiftyMoves() ? "50-move rule draw" :
+            chess.isInsufficientMaterial() ? "draw by insufficient material" :
+            chess.isStalemate() ? "stalemate" :
+            "three-fold repetition draw";
+    }
+
+    board.state.moveInputProcess.then(() => {
+        board.setPosition(chess.fen(), true);
+    });
+
+    if (chess.inCheck()) {
+        board.addMarker(
+            MARKER_TYPE.circleDangerFilled,
+            chess.findPiece({ type: "k", color: chess.turn() })[0],
+        );
+    }
+
+    if (chess.turn() == botColor) botThink();
+}
+
+function botThink() {
+    writeUci(`\
+position startpos moves ${chess.history({ verbose: true }).map(e => e.lan).join(" ")}\n\
+go movetime ${movetime.value * 1000}\n`);
+    thinking = true;
+}
+
+function restartGame(color) {
+    botColor = color == "white" ? "b" : "w";
+    playerColor = color == "white" ? "w" : "b";
+
+    chess.reset();
+    chess.setHeader(botColor == "w" ? "White" : "Black", "Bot");
+    if (debugCollapse.open) chess.setHeader("Cheated", "yes");
+
+    board.setPosition(chess.fen(), true);
+    board.setOrientation(playerColor);
+
+    if (chess.turn() == botColor) botThink();
+}
+
+function handleUciOut() {
+    const lines = uciOutput.split(/\n+/);
+    lines.forEach((line, i) => {
+        if (i + 1 == lines.length) {
+            uciOutput = line;
+            return;
+        }
+
+        const tokens = line.split(/\s+/);
+        console.log(tokens);
+
+        tokens.forEach((cmd, j) => {
+            switch (cmd) {
+                case "bestmove": {
+                    if (chess.turn() == botColor) {
+                        makeMove(tokens[j + 1]);
+                        thinking = false;
+                    }
+                    return;
+                }
+                case "id": {
+                    if (tokens[j + 1] == "name") {
+                        chess.setHeader(botColor == "w" ? "White" : "Black", tokens.slice(j + 2).join(" "));
+                    }
+                    return;
+                }
+                case "info": {
+                    let score, depth, nodes;
+                    for (let k = j + 1; k < tokens.length; k++) {
+                        switch (tokens[k]) {
+                            case "score": {
+                                let value = tokens[k + 2] * (botColor == "w" ? 1 : -1);
+                                score = (tokens[++k] == "cp") ? `${(value > 0 ? '+' : '') + (value / 100).toFixed(2)}` : `#${value}`;
+
+                                k++;
+                                break;
+                            }
+                            case "depth": {
+                                depth = tokens[++k];
+                                break;
+                            }
+                            case "nodes": {
+                                nodes = tokens[++k];
+                                break;
+                            }
+                        }
+                    }
+
+                    evalScore.innerText = score;
+                    evalMsg.innerText = `Depth: ${depth} (${nodes} nodes)`;
+                    return;
+                }
+            }
+        });
+    });
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    board = Chessboard2("chessboard", config);
+    board = new Chessboard(chessboard, {
+        position: chess.fen(),
+        assetsUrl: "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/assets/",
+        extensions: [
+            {class: Markers},
+            {class: PromotionDialog},
+            {class: RightClickAnnotator},
+        ],
+    });
+    board.enableMoveInput(inputHandler);
 
-    startW.onclick = () => restartGame("white");
-    startB.onclick = () => restartGame("black");
+    restartGame("white");
+
+    startW.onclick = () => !thinking ? restartGame("white") : 0;
+    startB.onclick = () => !thinking ? restartGame("black") : 0;
 
     exportBtn.onclick = () => {
-        message.innerText += `PGN:\n${chess.pgn()}\n`;
+        message.innerText = `PGN:\n${chess.pgn()}\n\n`;
     };
     uploadBtn.onclick = () => {
-        message.innerText += `Exporting...\n`;
+        message.innerText = `Exporting...\n`;
 
         fetch("https://dpaste.com/api/", {
             method: "POST",
@@ -94,19 +227,22 @@ document.addEventListener("DOMContentLoaded", function() {
             })
             .catch(e => message.innerText += `Export failed: ${e}\n`);
     };
+    debugCollapse.ontoggle = () => {
+        chess.setHeader("Cheated", "yes");
+    };
 
     uciWorker.onmessage = e => {
-        console.log(e.data);
-        switch (e.data.type) {
-            case "stdout":
-            case "debug":
-                debugMsg.innerText += e.data.content;
-                break;
+        debugMsg.innerText += e.data.content;
+
+        if (e.data.type == "stdout") {
+            uciOutput += e.data.content;
+            handleUciOut();
         }
     };
     uciWorker.postMessage({
         input: uciInput,
         inputLen: uciInLen,
+        engineUrl: location.hash.slice(1),
     });
-    writeUci("go\n");
+    writeUci("uci\nisready\n");
 });
