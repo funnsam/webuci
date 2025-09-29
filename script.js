@@ -12,7 +12,7 @@ let uciOutput = "";
 let thinking = false;
 
 function writeUci(inp) {
-    debugMsg.innerText += inp;
+    debugMsg.textContent += inp;
 
     const encoder = new TextEncoder();
     const utf8 = encoder.encode(inp);
@@ -44,15 +44,11 @@ function inputHandler(event) {
 
             board.removeArrows();
             board.removeMarkers();
+            addCheckMarker();
 
             const moves = chess.moves({ square: event.squareFrom, verbose: true });
             board.addLegalMovesMarkers(moves);
             return moves.length > 0;
-
-        case INPUT_EVENT_TYPE.moveInputStarted:
-            board.removeArrows()
-            board.removeMarkers()
-            return;
 
         case INPUT_EVENT_TYPE.validateMoveInput:
             try {
@@ -85,6 +81,15 @@ function inputHandler(event) {
     }
 }
 
+function addCheckMarker() {
+    if (chess.inCheck()) {
+        board.addMarker(
+            MARKER_TYPE.circleDangerFilled,
+            chess.findPiece({ type: "k", color: chess.turn() })[0],
+        );
+    }
+}
+
 function makeMove(move) {
     chess.move(move);
     board.state.moveInputProcess.then(() => {
@@ -92,24 +97,23 @@ function makeMove(move) {
     });
 
     board.removeMarkers(MARKER_TYPE.circleDangerFilled);
-    if (chess.inCheck()) {
-        board.addMarker(
-            MARKER_TYPE.circleDangerFilled,
-            chess.findPiece({ type: "k", color: chess.turn() })[0],
-        );
-    }
+    addCheckMarker();
 
     if (chess.isGameOver()) {
-        message.innerText =
-            chess.isCheckmate() ? "checkmate" :
+        message.textContent =
+            chess.isCheckmate() ? "Checkmate" :
             chess.isDrawByFiftyMoves() ? "50-move rule draw" :
-            chess.isInsufficientMaterial() ? "draw by insufficient material" :
-            chess.isStalemate() ? "stalemate" :
-            "three-fold repetition draw";
+            chess.isInsufficientMaterial() ? "Draw by insufficient material" :
+            chess.isStalemate() ? "Stalemate" :
+            "Three-fold repetition draw";
+
+        if (chess.isCheckmate()) evalScore.textContent = "-";
         return;
     }
 
     if (chess.turn() == botColor) botThink();
+
+    message.textContent = chess.turn() == botColor ? "Bot is thinking" : "Your turn";
 }
 
 function botThink() {
@@ -181,8 +185,8 @@ function handleUciOut() {
                         }
                     }
 
-                    evalScore.innerText = score;
-                    evalMsg.innerText = `Depth: ${depth} (${nodes} nodes)`;
+                    evalScore.textContent = score;
+                    evalMsg.textContent = `Depth: ${depth} (${nodes} nodes)`;
                     return;
                 }
             }
@@ -208,10 +212,10 @@ document.addEventListener("DOMContentLoaded", function() {
     startB.onclick = () => !thinking ? restartGame("black") : 0;
 
     exportBtn.onclick = () => {
-        message.innerText = `PGN:\n${chess.pgn()}\n\n`;
+        message.textContent = `PGN:\n${chess.pgn()}\n\n`;
     };
-    uploadBtn.onclick = () => {
-        message.innerText = `Exporting...\n`;
+    uploadDBtn.onclick = () => {
+        message.textContent = `Exporting...\n`;
 
         fetch("https://dpaste.com/api/", {
             method: "POST",
@@ -223,16 +227,22 @@ document.addEventListener("DOMContentLoaded", function() {
                 return resp.text();
             })
             .then(text => {
-                message.innerText += `Export link: ${text.trim()}\n`;
+                message.textContent += `Export link: ${text.trim()}\n`;
             })
-            .catch(e => message.innerText += `Export failed: ${e}\n`);
+            .catch(e => message.textContent += `Export failed: ${e}\n`);
+    };
+    analyzeBtn.onclick = () => {
+        window.open(`https://lichess.org/analysis/pgn/${encodeURIComponent(chess.pgn())}`, "_blank").focus();
+    };
+    liPasteBtn.onclick = () => {
+        window.open(`https://lichess.org/paste?pgn=${encodeURIComponent(chess.pgn())}`, "_blank").focus();
     };
     debugCollapse.ontoggle = () => {
         chess.setHeader("Cheated", "yes");
     };
 
     uciWorker.onmessage = e => {
-        debugMsg.innerText += e.data.content;
+        debugMsg.textContent += e.data.content;
 
         if (e.data.type == "stdout") {
             uciOutput += e.data.content;
