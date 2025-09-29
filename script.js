@@ -134,8 +134,12 @@ function restartGame(color, btn) {
     board.setPosition(chess.fen(), true);
     board.setOrientation(playerColor);
 
+    if (btn) {
+        writeUci("ucinewgame\n");
+        message.textContent = chess.turn() == botColor ? "Bot is thinking" : "Your turn";
+    }
+
     if (chess.turn() == botColor) botThink();
-    if (btn) message.textContent = chess.turn() == botColor ? "Bot is thinking" : "Your turn";
 }
 
 function handleUciOut() {
@@ -258,16 +262,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (location.hash === "") location.hash = "#random.wasm";
     startWorker();
-
-    window.onhashchange = () => {
-        uciWorker.terminate();
-        uciWorker = new Worker("uciworker.js", { type: "module" });
-
-        startWorker();
-
-        if (thinking) setTimeout(() => botThink(), 1000);
-    };
 });
+
+window.onhashchange = e => {
+    if (new URL(e.oldURL).hash === "") return;
+
+    uciWorker.terminate();
+    uciWorker = new Worker("uciworker.js", { type: "module" });
+
+    startWorker();
+
+    if (thinking) setTimeout(() => botThink(), 1000);
+};
 
 function startWorker() {
     uciWorker.onmessage = e => {
