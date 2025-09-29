@@ -1,9 +1,2 @@
 [build]
-command = "npm run build"
-
-[[plugins]]
-package = "netlify-plugin-minify-html"
-
-    [plugins.inputs.minifierOptions]
-    removeComments = true
-    collapseInlineTagWhitespace = false
+command = "npm run minify"
