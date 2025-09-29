@@ -258,6 +258,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (location.hash === "") location.hash = "#random.wasm";
     startWorker();
+
+    window.onhashchange = () => {
+        uciWorker.terminate();
+        uciWorker = new Worker("uciworker.js", { type: "module" });
+
+        startWorker();
+
+        if (thinking) setTimeout(() => botThink(), 1000);
+    };
 });
 
 function startWorker() {
@@ -281,13 +290,4 @@ function startWorker() {
         engineUrl: location.hash.slice(1),
     });
     writeUci("uci\nisready\nucinewgame\n");
-}
-
-window.onhashchange = () => {
-    uciWorker.terminate();
-    uciWorker = new Worker("uciworker.js", { type: "module" });
-
-    startWorker();
-
-    if (thinking) setTimeout(() => botThink(), 1000);
 }
