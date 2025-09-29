@@ -248,11 +248,9 @@ document.addEventListener("DOMContentLoaded", function() {
             .catch(e => shareMsg.textContent += `Export failed: ${e}\n`);
     };
     analyzeBtn.onclick = () => {
-        shareOutputDialog.show();
         window.open(`https://lichess.org/analysis/pgn/${encodeURIComponent(chess.pgn())}`, "_blank").focus();
     };
     liPasteBtn.onclick = () => {
-        shareOutputDialog.show();
         window.open(`https://lichess.org/paste?pgn=${encodeURIComponent(chess.pgn())}`, "_blank").focus();
     };
 
