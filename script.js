@@ -5,7 +5,7 @@ import { Markers, MARKER_TYPE } from "https://cdn.jsdelivr.net/npm/cm-chessboard
 import { PromotionDialog } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/src/extensions/promotion-dialog/PromotionDialog.js";
 import { RightClickAnnotator } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8.10.1/src/extensions/right-click-annotator/RightClickAnnotator.js";
 
-const uciWorker = new Worker("uciworker.js", { type: "module" });
+let uciWorker = new Worker("uciworker.js", { type: "module" });
 let uciInput = new SharedArrayBuffer(4096);
 let uciInLen = new SharedArrayBuffer(4);
 let uciOutput = "";
@@ -123,7 +123,7 @@ go movetime ${movetime.value * 1000}\n`);
     thinking = true;
 }
 
-function restartGame(color) {
+function restartGame(color, btn) {
     botColor = color == "white" ? "b" : "w";
     playerColor = color == "white" ? "w" : "b";
 
@@ -135,6 +135,7 @@ function restartGame(color) {
     board.setOrientation(playerColor);
 
     if (chess.turn() == botColor) botThink();
+    if (btn) message.textContent = chess.turn() == botColor ? "Bot is thinking" : "Your turn";
 }
 
 function handleUciOut() {
@@ -208,8 +209,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     restartGame("white");
 
-    startW.onclick = () => !thinking ? (resignDialog.close(), restartGame("white")) : 0;
-    startB.onclick = () => !thinking ? (resignDialog.close(), restartGame("black")) : 0;
+    startW.onclick = () => !thinking ? (resignDialog.close(), restartGame("white", 1)) : 0;
+    startB.onclick = () => !thinking ? (resignDialog.close(), restartGame("black", 1)) : 0;
 
     resign.onclick = () => resignDialog.show();
     share.onclick = () => shareDialog.show();
@@ -255,18 +256,24 @@ document.addEventListener("DOMContentLoaded", function() {
         chess.setHeader("Cheated", "yes");
     };
 
+    if (location.hash === "") location.hash = "#random.wasm";
+    startWorker();
+});
+
+function startWorker() {
     uciWorker.onmessage = e => {
         debugMsg.textContent += e.data.content;
 
-        if (e.data.type == "stdout") {
-            uciOutput += e.data.content;
-            handleUciOut();
+        switch (e.data.type) {
+            case "stdout":
+                uciOutput += e.data.content;
+                handleUciOut();
+                break;
+            case "alert":
+                alert(e.data.content);
+                break;
         }
     };
-
-    if (location.hash === "") {
-        location.hash = "#random.wasm";
-    }
 
     uciWorker.postMessage({
         input: uciInput,
@@ -274,4 +281,13 @@ document.addEventListener("DOMContentLoaded", function() {
         engineUrl: location.hash.slice(1),
     });
     writeUci("uci\nisready\nucinewgame\n");
-});
+}
+
+window.onhashchange = () => {
+    uciWorker.terminate();
+    uciWorker = new Worker("uciworker.js", { type: "module" });
+
+    startWorker();
+
+    if (thinking) setTimeout(() => botThink(), 1000);
+}

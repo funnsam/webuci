@@ -51,13 +51,18 @@ onmessage = e => {
     input = new Uint8Array(e.data.input);
     inputLen = new Int32Array(e.data.inputLen);
 
-    const engine = WebAssembly.instantiateStreaming(fetch(e.data.engineUrl), imports);
-
-    engine.then(engine => {
-        const exitCode = wasi.start(engine.instance);
-        postMessage({
-            type: "debug",
-            content: `\n(webuci): engine exited with exit code ${exitCode}\n`,
+    WebAssembly.instantiateStreaming(fetch(e.data.engineUrl), imports)
+        .then(engine => {
+            const exitCode = wasi.start(engine.instance);
+            postMessage({
+                type: "debug",
+                content: `\n(webuci): engine exited with exit code ${exitCode}\n`,
+            });
+        })
+        .catch(err => {
+            postMessage({
+                type: "alert",
+                content: `fetch engine WASM error: ${err}`,
+            });
         });
-    });
 };
