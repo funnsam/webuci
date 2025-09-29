@@ -11,37 +11,58 @@
         <script src="script.js" type="module"></script>
     </head>
     <body>
-        <div id="left">
-            <details id="debugCollapse">
-                <summary>Debug messages (contains hints from the engine)</summary>
-                <pre id="debugMsg"></pre>
-            </details>
-        </div>
-        <div id="mid">
-            <div id="chessboard"></div>
-            <div id="control">
-                <div><!--
-                 --><button id="startW">Resign and restart as white</button><!--
-                 --><button id="startB">Resign and restart as black</button><!--
-                 --><button id="exportBtn">Export game as PGN</button><!--
-                 --><button id="uploadDBtn">Upload game to dpaste</button><!--
-                 --><button id="analyzeBtn">Analyse game on lichess</button><!--
-                 --><button id="liPasteBtn">Upload game to lichess</button><!--
-             --></div>
-
-                <div>
-                    <label for="movetime">Engine move time</label>
-                    <input id="movetime" name="movetime" type="range" value="5" min="0.1" max="10" step="0.1" autocomplete="off" oninput="this.nextElementSibling.value=this.value+'s'">
-                    <output>5s</output>
+        <div id="main">
+            <div id="left">
+                <details id="debugCollapse">
+                    <summary>Debug messages (contains hints from the engine)</summary>
+                    <pre id="debugMsg"></pre>
+                </details>
+            </div>
+            <div id="mid">
+                <div id="chessboard"></div>
+                <div id="control">
+                    <div><!--
+                     --><button id="resign">Resign</button><!--
+                     --><button id="share">Share</button><!--
+                 --></div>
+                    <div>
+                        <label for="movetime">Engine move time</label>
+                        <input id="movetime" name="movetime" type="range" value="5" min="0.1" max="10" step="0.1" autocomplete="off" oninput="this.nextElementSibling.value=this.value+'s'">
+                        <output>5s</output>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div id="right">
-            <div id="evalDiv">
-                <h1 id="evalScore">+0.00</h1>
-                <span id="evalMsg">Depth: 0 (0 nodes)</span>
+            <div id="right">
+                <div id="evalDiv">
+                    <h1 id="evalScore">+0.00</h1>
+                    <span id="evalMsg">Depth: 0 (0 nodes)</span>
+                </div>
+                <pre id="message">WebUCI source: https://github.com/funnsam/webuci/</pre>
             </div>
-            <pre id="message">WebUCI source: https://github.com/funnsam/webuci/</pre>
         </div>
+
+        <dialog id="resignDialog">
+            <div>
+                <form method="dialog"><button autofocus>Cancel</button></form>
+                <button id="startW">Restart as white</button>
+                <button id="startB">Restart as black</button>
+            </div>
+        </dialog>
+        <dialog id="shareDialog">
+            <div>
+                <form method="dialog"><button autofocus>Cancel</button></form>
+                <button id="exportBtn">Export game as PGN</button>
+                <button id="uploadDBtn">Upload game to dpaste</button>
+                <button id="analyzeBtn">Analyse game on lichess</button>
+                <button id="liPasteBtn">Upload game to lichess</button>
+            </div>
+        </dialog>
+        <dialog id="shareOutputDialog">
+            <div>
+                <form method="dialog"><button autofocus>Done</button></form>
+                <button id="copyShare">Copy to clipboard</button>
+                <pre id="shareMsg"></pre>
+            </div>
+        </dialog>
     </body>
 </html>

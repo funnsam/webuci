@@ -208,14 +208,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
     restartGame("white");
 
-    startW.onclick = () => !thinking ? restartGame("white") : 0;
-    startB.onclick = () => !thinking ? restartGame("black") : 0;
+    startW.onclick = () => !thinking ? (resignDialog.close(), restartGame("white")) : 0;
+    startB.onclick = () => !thinking ? (resignDialog.close(), restartGame("black")) : 0;
 
+    resign.onclick = () => resignDialog.show();
+    share.onclick = () => shareDialog.show();
+
+    copyShare.onclick = () => {
+        navigator.clipboard.writeText(shareMsg.textContent);
+
+        copyShare.textContent = "Copied";
+        setTimeout(() => copyShare.textContent = "Copy to clipboard", 2500);
+    };
     exportBtn.onclick = () => {
-        message.textContent = `PGN:\n${chess.pgn()}\n\n`;
+        shareOutputDialog.show();
+        shareMsg.textContent = chess.pgn({ maxWidth: 40 });
     };
     uploadDBtn.onclick = () => {
-        message.textContent = `Exporting...\n`;
+        shareOutputDialog.show();
+        shareMsg.textContent = `Exporting...\n`;
 
         fetch("https://dpaste.com/api/", {
             method: "POST",
@@ -227,16 +238,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 return resp.text();
             })
             .then(text => {
-                message.textContent += `Export link: ${text.trim()}\n`;
+                shareMsg.textContent = text.trim();
             })
-            .catch(e => message.textContent += `Export failed: ${e}\n`);
+            .catch(e => shareMsg.textContent += `Export failed: ${e}\n`);
     };
     analyzeBtn.onclick = () => {
+        shareOutputDialog.show();
         window.open(`https://lichess.org/analysis/pgn/${encodeURIComponent(chess.pgn())}`, "_blank").focus();
     };
     liPasteBtn.onclick = () => {
+        shareOutputDialog.show();
         window.open(`https://lichess.org/paste?pgn=${encodeURIComponent(chess.pgn())}`, "_blank").focus();
     };
+
     debugCollapse.ontoggle = () => {
         chess.setHeader("Cheated", "yes");
     };

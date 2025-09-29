@@ -6,15 +6,22 @@ html, body {
 }
 
 body {
+    background: #0f161a;
+    color: #cceeff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+#main {
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 12px;
     padding: 12px;
-    box-sizing: border-box;
+    height: 100%;
     overflow: auto;
-    background: #222831;
-    color: #EEEEEE;
 }
 
 #left, #right {
@@ -56,9 +63,10 @@ h1 {
 }
 
 button {
-    background: #393E46;
-    color: #EEEEEE;
-    border: none;
+    background: #19252b;
+    color: #cceeff;
+    border: 1px solid #26414d;
+    border-radius: 4px;
     margin: 1px;
     padding: 8px;
     cursor: pointer;
@@ -67,16 +75,55 @@ button {
 }
 
 button:hover {
-    background: #26636B;
+    background: #26414d;
 }
 
 input {
-    accent-color: #00ADB5;
+    accent-color: #0698D6;
     vertical-align: middle;
 }
 
+dialog {
+    top: 50%;
+    transform: translateY(-50%);
+    border: 1px solid #19252b9f;
+    border-radius: 8px;
+    background: #19252b7f;
+    backdrop-filter: blur(6px);
+    padding: 24px;
+    color: inherit;
+    max-width: min(95%, 400px);
+    max-height: min(95%, 400px);
+    overflow: auto;
+}
+
+#shareOutputDialog {
+    width: min(95%, 400px);
+}
+
+dialog div {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+form button {
+    border-color: #D64000;
+    background: #9C2F00;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+dialog pre {
+    width: 100%;
+    overflow: auto;
+    padding: 8px;
+    background: #0f161a;
+    border-radius: 2px;
+}
+
 @media only screen and (min-width: 768px) {
-    body {
+    #main {
         flex-direction: row;
     }
 

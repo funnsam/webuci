@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "minify": "chmod +x minify.sh && ./minify.sh"
+    },
+    "dependencies": {
+        "minify": "^14.1.0"
+    }
+}
